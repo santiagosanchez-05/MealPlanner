@@ -15,39 +15,49 @@ class _LoginPageState extends State<LoginPage> {
   final passCtrl = TextEditingController();
   bool loading = false;
 
-  Future<void> login() async {
-    final supabase = Supa.client;
-    final email = emailCtrl.text.trim();
-    final pass = passCtrl.text.trim();
+ Future<void> login() async {
+  final supabase = Supa.client;
+  final email = emailCtrl.text.trim();
+  final pass = passCtrl.text.trim();
 
-    if (email.isEmpty || pass.isEmpty) {
-      showMessage("Ingrese su correo y contraseña");
-      return;
-    }
+  if (email.isEmpty || pass.isEmpty) {
+    showMessage("Ingrese su correo y contraseña");
+    return;
+  }
 
-    setState(() => loading = true);
+  setState(() => loading = true);
 
-    try {
-      await supabase.auth.signInWithPassword(
+  try {
+    final result = await supabase.auth.signInWithPassword(
       email: email,
       password: pass,
+    );
+
+    if (result.user != null) {
+      // ✅ LOGIN CORRECTO
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardPage()),
       );
-
-Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(builder: (_) => const DashboardPage()),
-);
-
-   } catch (e) {
-  if (e.toString().contains("Email not confirmed")) {
-    showMessage("Debes confirmar tu correo. Revisa tu bandeja.");
-  } else {
-    showMessage("Error: $e");
+    } else {
+      // ❌ CREDENCIALES INCORRECTAS
+      showMessage("Correo o contraseña incorrectos");
+    }
+  } catch (e) {
+    if (e.toString().contains("Email not confirmed")) {
+      showMessage("Debes confirmar tu correo. Revisa tu bandeja.");
+    } else {
+      showMessage("Error: $e");
+    }
+  } finally {
+    if (mounted) {
+      setState(() => loading = false);
+    }
   }
 }
 
-    setState(() => loading = false);
-  }
 
   void showMessage(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(

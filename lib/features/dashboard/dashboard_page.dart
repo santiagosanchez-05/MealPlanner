@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/supabase_client.dart';
 import '../auth/login_page.dart';
+import '../recipes/view/recipe_list_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -101,8 +102,16 @@ class DashboardPage extends StatelessWidget {
                 _buildCard(
                   icon: Icons.fastfood,
                   title: "Recetas",
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const RecipeListPage(),
+                      ),
+                    );
+                  },
                 ),
+
                 _buildCard(
                   icon: Icons.shopping_basket,
                   title: "Productos",
