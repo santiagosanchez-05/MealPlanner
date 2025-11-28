@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../service/recipe_service.dart';
 import '../model/recipe_model.dart';
 import '../model/ingredient_model.dart';
+import 'dart:typed_data';
 
 class RecipeViewModel extends ChangeNotifier {
   final RecipeService _service = RecipeService();
@@ -66,4 +67,16 @@ class RecipeViewModel extends ChangeNotifier {
     await _service.deleteRecipe(id);
     await loadRecipes();
   }
+  Future<void> updateRecipe(
+  String id,
+  String name,
+  String steps,
+  Uint8List? photo,
+  List<IngredientModel> ingredients,
+  ) async {
+    await _service.updateRecipe(id, name, steps, photo, ingredients);
+    await loadRecipes(); // ✅ ESTE SÍ EXISTE
+    notifyListeners();
+  }
+  
 }

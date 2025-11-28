@@ -3,20 +3,23 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../model/ingredient_model.dart';
+import '../model/recipe_model.dart';
 import '../viewmodel/recipe_viewmodel.dart';
 
-class CreateRecipePage extends StatefulWidget {
-  const CreateRecipePage({super.key});
+class EditRecipePage extends StatefulWidget {
+  final RecipeModel recipe;
+
+  const EditRecipePage({super.key, required this.recipe});
 
   @override
-  State<CreateRecipePage> createState() => _CreateRecipePageState();
+  State<EditRecipePage> createState() => _EditRecipePageState();
 }
 
-class _CreateRecipePageState extends State<CreateRecipePage> {
+class _EditRecipePageState extends State<EditRecipePage> {
   final _formKey = GlobalKey<FormState>();
 
-  final nameCtrl = TextEditingController();
-  final stepsCtrl = TextEditingController();
+  late TextEditingController nameCtrl;
+  late TextEditingController stepsCtrl;
 
   final ingCtrl = TextEditingController();
   final qtyCtrl = TextEditingController();
@@ -25,88 +28,99 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
   Uint8List? photo;
   List<IngredientModel> ingredients = [];
 
-  // ============================
-  // AGREGAR INGREDIENTE CON VALIDACIÓN
-  // ============================
- void addIngredient() {
-  final name = ingCtrl.text.trim();
-  final qty = qtyCtrl.text.trim();
-  final category = catCtrl.text.trim();
-
-  if (name.isEmpty || qty.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Nombre y cantidad del ingrediente son obligatorios"),
-        backgroundColor: Colors.orange,
-      ),
-    );
-    return;
+  @override
+  void initState() {
+    super.initState();
+    nameCtrl = TextEditingController(text: widget.recipe.name);
+    stepsCtrl = TextEditingController(text: widget.recipe.steps);
+    photo = widget.recipe.photo;
+    ingredients = List.from(widget.recipe.ingredients);
   }
 
-  // ✅ Evitar duplicados
-  final exists = ingredients.any(
-    (e) => e.name.toLowerCase() == name.toLowerCase(),
-  );
+  // ============================
+  // AGREGAR INGREDIENTE CON VALIDACIONES
+  // ============================
+  void addIngredient() {
+    final name = ingCtrl.text.trim();
+    final qty = qtyCtrl.text.trim();
+    final category = catCtrl.text.trim();
 
-  if (exists) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Este ingrediente ya fue agregado"),
-        backgroundColor: Colors.red,
-      ),
+    if (name.isEmpty || qty.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Nombre y cantidad del ingrediente son obligatorios"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // ✅ Evitar duplicados
+    final exists = ingredients.any(
+      (e) => e.name.toLowerCase() == name.toLowerCase(),
     );
-    return;
-  }
 
-  // ✅ Validar que la cantidad no sea exagerada (si es solo número)
+    if (exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Este ingrediente ya fue agregado"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // ✅ VALIDAR FORMATO: número obligatorio al inicio
-  final validFormat = RegExp(r'^\d+(\s?[a-zA-Z]+)?$');
+    final validFormat = RegExp(r'^\d+(\s?[a-zA-Z]+)?$');
 
-  if (!validFormat.hasMatch(qty)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("La cantidad debe empezar con un número (ej: 2, 500g, 1 taza)"),
-        backgroundColor: Colors.red,
+    if (!validFormat.hasMatch(qty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              "La cantidad debe empezar con un número (ej: 2, 500g, 1 taza)"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // ✅ Validar que el valor numérico no sea exagerado
+    final numberPart =
+        int.parse(RegExp(r'^\d+').firstMatch(qty)!.group(0)!);
+
+    if (numberPart > 10000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("La cantidad es demasiado grande"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    ingredients.add(
+      IngredientModel(
+        name: name,
+        quantity: qty,
+        category: category,
       ),
     );
-    return;
+
+    ingCtrl.clear();
+    qtyCtrl.clear();
+    catCtrl.clear();
+    setState(() {});
   }
 
-  // ✅ Validar que el valor numérico no sea exagerado
-  final numberPart = int.parse(
-    RegExp(r'^\d+').firstMatch(qty)!.group(0)!,
-  );
-
-  if (numberPart > 10000) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("La cantidad es demasiado grande"),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
+  void removeIngredient(int index) {
+    ingredients.removeAt(index);
+    setState(() {});
   }
 
-
-  ingredients.add(
-    IngredientModel(
-      name: name,
-      quantity: qty,
-      category: category,
-    ),
-  );
-
-  ingCtrl.clear();
-  qtyCtrl.clear();
-  catCtrl.clear();
-  setState(() {});
-}
-
-
   // ============================
-  // GUARDAR RECETA CON VALIDACIÓN
+  // GUARDAR CAMBIOS CON VALIDACIÓN
   // ============================
-  Future<void> saveRecipe(RecipeViewModel vm) async {
+  Future<void> saveChanges(RecipeViewModel vm) async {
     if (!_formKey.currentState!.validate()) return;
 
     if (ingredients.isEmpty) {
@@ -119,7 +133,8 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
       return;
     }
 
-    await vm.addRecipe(
+    await vm.updateRecipe(
+      widget.recipe.id,
       nameCtrl.text.trim(),
       stepsCtrl.text.trim(),
       photo,
@@ -136,7 +151,7 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
     final vm = Provider.of<RecipeViewModel>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Nueva Receta")),
+      appBar: AppBar(title: const Text("Editar Receta")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -185,12 +200,12 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                 decoration:
                     const InputDecoration(labelText: "Ingrediente"),
               ),
+
               TextField(
                 controller: qtyCtrl,
                 decoration: const InputDecoration(labelText: "Cantidad"),
                 keyboardType: TextInputType.text,
                 inputFormatters: [
-                  // ✅ SOLO permite empezar con números
                   FilteringTextInputFormatter.allow(
                     RegExp(r'^[0-9]+[a-zA-Z\s]*$'),
                   ),
@@ -198,13 +213,14 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                 ],
               ),
 
-
               TextField(
                 controller: catCtrl,
                 decoration: const InputDecoration(labelText: "Categoría"),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                  LengthLimitingTextInputFormatter(20), // máx 20 letras
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                  ),
+                  LengthLimitingTextInputFormatter(20),
                 ],
               ),
 
@@ -225,20 +241,17 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                       trailing: IconButton(
                         icon:
                             const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          ingredients.removeAt(i);
-                          setState(() {});
-                        },
+                        onPressed: () => removeIngredient(i),
                       ),
                     );
                   },
                 ),
               ),
 
-              // ================= GUARDAR =================
+              // ================= GUARDAR CAMBIOS =================
               ElevatedButton(
-                onPressed: () => saveRecipe(vm),
-                child: const Text("GUARDAR"),
+                onPressed: () => saveChanges(vm),
+                child: const Text("GUARDAR CAMBIOS"),
               ),
             ],
           ),

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodel/recipe_viewmodel.dart';
+import 'edit_recipe_page.dart';
+import '../model/recipe_model.dart';
 
 class RecipeDetailPage extends StatelessWidget {
   final String recipeId;
@@ -20,6 +22,13 @@ class RecipeDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = Provider.of<RecipeViewModel>(context);
+    final recipe = RecipeModel(
+      id: recipeId,
+      name: name,
+      steps: steps,
+      photo: photo,
+      ingredients: vm.ingredients,
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(name)),
@@ -71,6 +80,17 @@ class RecipeDetailPage extends StatelessWidget {
             );
           },
         ),
+),
+ElevatedButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditRecipePage(recipe: recipe),
+      ),
+    );
+  },
+  child: const Text("EDITAR"),
 ),
 
           ],
