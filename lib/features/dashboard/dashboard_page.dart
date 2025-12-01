@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/supabase_client.dart';
 import '../auth/login_page.dart';
 import '../recipes/view/recipe_list_page.dart';
+import '../planner/view/planner_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -31,7 +32,7 @@ class DashboardPage extends StatelessWidget {
                 (route) => false,
               );
             },
-          )
+          ),
         ],
       ),
 
@@ -40,7 +41,6 @@ class DashboardPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
             // HEADER DE USUARIO
             Container(
               padding: const EdgeInsets.all(20),
@@ -51,7 +51,7 @@ class DashboardPage extends StatelessWidget {
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
-                  )
+                  ),
                 ],
               ),
               child: Row(
@@ -83,10 +83,7 @@ class DashboardPage extends StatelessWidget {
 
             const Text(
               "Accesos rápidos",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 20),
@@ -105,9 +102,7 @@ class DashboardPage extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const RecipeListPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const RecipeListPage()),
                     );
                   },
                 ),
@@ -120,7 +115,12 @@ class DashboardPage extends StatelessWidget {
                 _buildCard(
                   icon: Icons.calendar_month,
                   title: "Planner",
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PlannerPage()),
+                    );
+                  },
                 ),
                 _buildCard(
                   icon: Icons.favorite,
@@ -154,13 +154,10 @@ class DashboardPage extends StatelessWidget {
                 },
                 child: const Text(
                   "Cerrar Sesión",
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.red, fontSize: 16),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -181,10 +178,7 @@ class DashboardPage extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-            )
+            BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10),
           ],
         ),
         child: Column(
@@ -194,11 +188,8 @@ class DashboardPage extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            )
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'features/auth/login_page.dart';
 import 'features/recipes/viewmodel/recipe_viewmodel.dart';
+import 'features/planner/viewmodel/planner_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,9 +26,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => RecipeViewModel()..loadRecipes(),
-        ),
+        ChangeNotifierProvider(create: (_) => RecipeViewModel()..loadRecipes()),
+        ChangeNotifierProvider(create: (_) => PlannerViewModel()),
       ],
       child: const MaterialApp(
         debugShowCheckedModeBanner: false,
