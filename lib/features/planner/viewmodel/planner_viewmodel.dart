@@ -62,9 +62,13 @@ class PlannerViewModel extends ChangeNotifier {
   // ==================== GESTIÓN DE COMIDAS ====================
 
   /// Asigna una receta a una comida específica
-  Future<bool> assignRecipeToMeal(String mealPlanId, String recipeId) async {
+  Future<bool> assignRecipeToMeal(
+    String mealPlanId,
+    String recipeId,
+    String recipeName,
+  ) async {
     return await _executeWithLoading(() async {
-      await _service.assignRecipeToMeal(mealPlanId, recipeId);
+      await _service.assignRecipeToMeal(mealPlanId, recipeId, recipeName);
 
       // Recargar el plan actualizado
       if (_currentWeekPlan?.id != null) {
@@ -125,6 +129,22 @@ class PlannerViewModel extends ChangeNotifier {
   }
 
   // ==================== OPERACIONES AVANZADAS ====================
+
+  /// Guarda el plan semanal completo con todas las recetas asignadas
+  Future<bool> savePlan() async {
+    if (_currentWeekPlan == null) {
+      _errorMessage = 'No hay plan para guardar';
+      notifyListeners();
+      return false;
+    }
+
+    return await _executeWithLoading(() async {
+      // El plan ya está siendo guardado automáticamente con cada asignación de receta
+      // Este método confirma que todo está guardado
+      await _service.saveWeekPlan(_currentWeekPlan!);
+      _errorMessage = null;
+    });
+  }
 
   /// Duplica el plan actual a otra semana
   Future<bool> duplicatePlanToWeek(DateTime targetWeekStart) async {

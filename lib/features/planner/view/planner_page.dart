@@ -4,6 +4,7 @@ import '../viewmodel/planner_viewmodel.dart';
 import '../model/meal_type.dart';
 import '../model/day_plan.dart';
 import '../model/meal_plan.dart';
+import '../../recipes/viewmodel/recipe_viewmodel.dart';
 
 /// Página principal del planificador semanal
 class PlannerPage extends StatefulWidget {
@@ -29,6 +30,11 @@ class _PlannerPageState extends State<PlannerPage> {
       appBar: AppBar(
         title: const Text('Planificador Semanal'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: () => _savePlan(context),
+            tooltip: 'Guardar plan',
+          ),
           IconButton(
             icon: const Icon(Icons.today),
             onPressed: () {
@@ -188,6 +194,47 @@ class _PlannerPageState extends State<PlannerPage> {
       case 'delete':
         _showDeleteDialog(viewModel);
         break;
+    }
+  }
+
+  Future<void> _savePlan(BuildContext context) async {
+    final viewModel = context.read<PlannerViewModel>();
+    
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Guardar plan'),
+        content: const Text(
+          '¿Deseas guardar el plan semanal con todas las recetas asignadas?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      final success = await viewModel.savePlan();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Plan guardado correctamente'
+                  : 'Error al guardar: ${viewModel.errorMessage}',
+            ),
+            backgroundColor: success ? Colors.green : Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -400,11 +447,68 @@ class _MealTile extends StatelessWidget {
     }
   }
 
-  void _addRecipe(BuildContext context) {
-    // TODO: Implementar navegación al selector de recetas
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Selector de recetas: Próximamente')),
-    );
+  void _addRecipe(BuildContext context) async {
+    final recipeViewModel = context.read<RecipeViewModel>();
+    final plannerViewModel = context.read<PlannerViewModel>();
+
+    // Cargar recetas del usuario
+    await recipeViewModel.loadRecipes();
+
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Seleccionar receta'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: recipeViewModel.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : recipeViewModel.recipes.isEmpty
+                    ? const Center(child: Text('No hay recetas disponibles'))
+                    : ListView.builder(
+                        itemCount: recipeViewModel.recipes.length,
+                        itemBuilder: (context, index) {
+                          final recipe = recipeViewModel.recipes[index];
+                          return ListTile(
+                            title: Text(recipe.name),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              
+                              // Asignar receta a la comida
+                              if (meal.id != null) {
+                                final success =
+                                    await plannerViewModel.assignRecipeToMeal(
+                                  meal.id!,
+                                  recipe.id,
+                                  recipe.name,
+                                );
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        success
+                                            ? 'Receta asignada: ${recipe.name}'
+                                            : 'Error: ${plannerViewModel.errorMessage}',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          );
+                        },
+                      ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _removeRecipe(BuildContext context) async {

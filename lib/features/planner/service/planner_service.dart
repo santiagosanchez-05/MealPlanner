@@ -130,12 +130,32 @@ class PlannerService {
     }
   }
 
+  /// Guarda un plan semanal (confirma que todos los cambios están guardados)
+  Future<void> saveWeekPlan(WeeklyPlan weekPlan) async {
+    if (weekPlan.id == null) {
+      throw Exception('El plan semanal no tiene ID');
+    }
+
+    try {
+      // Actualizar la fecha de última modificación del plan
+      await _client
+          .from('weekly_plans')
+          .update({
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', weekPlan.id!);
+    } catch (e) {
+      throw Exception('Error al guardar el plan semanal: $e');
+    }
+  }
+
   // ==================== MEAL PLANS ====================
 
   /// Asigna una receta a una comida específica
   Future<MealPlan> assignRecipeToMeal(
     String mealPlanId,
     String recipeId,
+    String recipeName,
   ) async {
     try {
       final response = await _client
@@ -279,7 +299,11 @@ class PlannerService {
               (meal) => meal.mealType == sourceMeal.mealType,
             );
 
-            await assignRecipeToMeal(targetMeal.id!, sourceMeal.recipeId!);
+            await assignRecipeToMeal(
+              targetMeal.id!,
+              sourceMeal.recipeId!,
+              sourceMeal.recipeName ?? '',
+            );
           }
         }
       }
