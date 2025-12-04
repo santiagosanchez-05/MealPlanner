@@ -3,6 +3,8 @@ import '../../core/supabase_client.dart';
 import '../auth/login_page.dart';
 import '../recipes/view/recipe_list_page.dart';
 import '../planner/view/planner_page.dart';
+import '../categories/view/category_list_page.dart';
+
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -107,11 +109,7 @@ class DashboardPage extends StatelessWidget {
                   },
                 ),
 
-                _buildCard(
-                  icon: Icons.shopping_basket,
-                  title: "Productos",
-                  onTap: () {},
-                ),
+                
                 _buildCard(
                   icon: Icons.calendar_month,
                   title: "Planner",
@@ -123,10 +121,17 @@ class DashboardPage extends StatelessWidget {
                   },
                 ),
                 _buildCard(
-                  icon: Icons.favorite,
-                  title: "Favoritos",
-                  onTap: () {},
+                  icon: Icons.category,
+                  title: "Categorías",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CategoryListPage()),
+                    );
+                  },
                 ),
+
+                
               ],
             ),
 

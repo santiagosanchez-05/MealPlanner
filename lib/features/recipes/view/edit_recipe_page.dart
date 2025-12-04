@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../model/ingredient_model.dart';
 import '../model/recipe_model.dart';
+import '../../categories/model/category_model.dart';
 import '../viewmodel/recipe_viewmodel.dart';
 
 class EditRecipePage extends StatefulWidget {
@@ -23,7 +24,8 @@ class _EditRecipePageState extends State<EditRecipePage> {
 
   final ingCtrl = TextEditingController();
   final qtyCtrl = TextEditingController();
-  final catCtrl = TextEditingController();
+
+  String? selectedCategoryId; // ✅ FK REAL
 
   Uint8List? photo;
   List<IngredientModel> ingredients = [];
@@ -31,24 +33,27 @@ class _EditRecipePageState extends State<EditRecipePage> {
   @override
   void initState() {
     super.initState();
+
     nameCtrl = TextEditingController(text: widget.recipe.name);
     stepsCtrl = TextEditingController(text: widget.recipe.steps);
     photo = widget.recipe.photo;
     ingredients = List.from(widget.recipe.ingredients);
+
+    final vm = Provider.of<RecipeViewModel>(context, listen: false);
+    vm.loadCategories(); // ✅ cargar categorías
   }
 
   // ============================
-  // AGREGAR INGREDIENTE CON VALIDACIONES
+  // AGREGAR INGREDIENTE
   // ============================
   void addIngredient() {
     final name = ingCtrl.text.trim();
     final qty = qtyCtrl.text.trim();
-    final category = catCtrl.text.trim();
 
-    if (name.isEmpty || qty.isEmpty) {
+    if (name.isEmpty || qty.isEmpty || selectedCategoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Nombre y cantidad del ingrediente son obligatorios"),
+          content: Text("Nombre, cantidad y categoría son obligatorios"),
           backgroundColor: Colors.orange,
         ),
       );
@@ -70,21 +75,20 @@ class _EditRecipePageState extends State<EditRecipePage> {
       return;
     }
 
-    // ✅ VALIDAR FORMATO: número obligatorio al inicio
+    // ✅ Validar formato cantidad
     final validFormat = RegExp(r'^\d+(\s?[a-zA-Z]+)?$');
 
     if (!validFormat.hasMatch(qty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              "La cantidad debe empezar con un número (ej: 2, 500g, 1 taza)"),
+          content:
+              Text("La cantidad debe iniciar con un número (ej: 2, 500g, 1 taza)"),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // ✅ Validar que el valor numérico no sea exagerado
     final numberPart =
         int.parse(RegExp(r'^\d+').firstMatch(qty)!.group(0)!);
 
@@ -102,13 +106,13 @@ class _EditRecipePageState extends State<EditRecipePage> {
       IngredientModel(
         name: name,
         quantity: qty,
-        category: category,
+        categoryId: selectedCategoryId!,
       ),
     );
 
     ingCtrl.clear();
     qtyCtrl.clear();
-    catCtrl.clear();
+    selectedCategoryId = null;
     setState(() {});
   }
 
@@ -118,21 +122,22 @@ class _EditRecipePageState extends State<EditRecipePage> {
   }
 
   // ============================
-  // GUARDAR CAMBIOS CON VALIDACIÓN
+  // GUARDAR CAMBIOS
   // ============================
   Future<void> saveChanges(RecipeViewModel vm) async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    if (ingredients.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Debes agregar al menos un ingrediente"),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+  if (ingredients.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Debes agregar al menos un ingrediente"),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
 
+  try {
     await vm.updateRecipe(
       widget.recipe.id,
       nameCtrl.text.trim(),
@@ -143,8 +148,17 @@ class _EditRecipePageState extends State<EditRecipePage> {
 
     if (!context.mounted) return;
 
-    Navigator.pop(context);
+    Navigator.pop(context); // ✅ SOLO SE EJECUTA SI TODO SALE BIEN
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Error al actualizar receta: $e"),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -194,11 +208,10 @@ class _EditRecipePageState extends State<EditRecipePage> {
 
               const Divider(),
 
-              // ================= INGREDIENTES =================
+              // ================= INGREDIENTE =================
               TextField(
                 controller: ingCtrl,
-                decoration:
-                    const InputDecoration(labelText: "Ingrediente"),
+                decoration: const InputDecoration(labelText: "Ingrediente"),
               ),
 
               TextField(
@@ -213,31 +226,44 @@ class _EditRecipePageState extends State<EditRecipePage> {
                 ],
               ),
 
-              TextField(
-                controller: catCtrl,
-                decoration: const InputDecoration(labelText: "Categoría"),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                    RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
-                  ),
-                  LengthLimitingTextInputFormatter(20),
-                ],
-              ),
+              // ================= CATEGORÍA =================
+              DropdownButtonFormField<String>(
+              value: selectedCategoryId,
+              decoration: const InputDecoration(labelText: "Categoría"),
+              items: vm.categories.map((CategoryModel cat) {
+                return DropdownMenuItem(
+                  value: cat.id,
+                  child: Text(cat.name),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedCategoryId = value;
+                });
+              },
+            ),
+
+
+              const SizedBox(height: 10),
 
               ElevatedButton(
                 onPressed: addIngredient,
                 child: const Text("Agregar Ingrediente"),
               ),
 
+              // ================= LISTA =================
               Expanded(
                 child: ListView.builder(
                   itemCount: ingredients.length,
                   itemBuilder: (_, i) {
                     final e = ingredients[i];
+                    final catName = vm.categories
+                        .firstWhere((c) => c.id == e.categoryId)
+                        .name;
+
                     return ListTile(
                       title: Text(e.name),
-                      subtitle:
-                          Text("${e.quantity} - ${e.category}"),
+                      subtitle: Text("${e.quantity} - $catName"),
                       trailing: IconButton(
                         icon:
                             const Icon(Icons.delete, color: Colors.red),

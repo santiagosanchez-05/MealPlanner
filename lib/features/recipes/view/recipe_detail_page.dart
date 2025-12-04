@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../viewmodel/recipe_viewmodel.dart';
 import 'edit_recipe_page.dart';
 import '../model/recipe_model.dart';
+import '../../categories/model/category_model.dart';
 
 class RecipeDetailPage extends StatelessWidget {
   final String recipeId;
@@ -22,6 +23,8 @@ class RecipeDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = Provider.of<RecipeViewModel>(context);
+
+    // ✅ Crear objeto completo para enviar al Edit
     final recipe = RecipeModel(
       id: recipeId,
       name: name,
@@ -37,7 +40,7 @@ class RecipeDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // FOTO
+            // ================= FOTO =================
             if (photo != null)
               Center(
                 child: Image.memory(
@@ -49,6 +52,7 @@ class RecipeDetailPage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
+            // ================= PREPARACIÓN =================
             const Text(
               "Preparación",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -58,6 +62,7 @@ class RecipeDetailPage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
+            // ================= INGREDIENTES =================
             const Text(
               "Ingredientes",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -66,33 +71,49 @@ class RecipeDetailPage extends StatelessWidget {
             const SizedBox(height: 10),
 
             Expanded(
-  child: vm.ingredients.isEmpty
-      ? const Center(child: Text("No hay ingredientes"))
-      : ListView.builder(
-          itemCount: vm.ingredients.length,
-          itemBuilder: (_, i) {
-            final ing = vm.ingredients[i];
-            return ListTile(
-              leading: const Icon(Icons.circle, size: 10),
-              title: Text(ing.name),
-              subtitle:
-                  Text("${ing.quantity} - ${ing.category}"),
-            );
-          },
-        ),
-),
-ElevatedButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EditRecipePage(recipe: recipe),
-      ),
-    );
-  },
-  child: const Text("EDITAR"),
-),
+              child: vm.ingredients.isEmpty
+                  ? const Center(child: Text("No hay ingredientes"))
+                  : ListView.builder(
+                      itemCount: vm.ingredients.length,
+                      itemBuilder: (_, i) {
+                        final ing = vm.ingredients[i];
 
+                        // ✅ Buscar nombre de la categoría por ID
+                        final catName = vm.categories
+                            .firstWhere(
+                              (c) => c.id == ing.categoryId,
+                              orElse: () =>
+                                  CategoryModel(id: '', name: 'Sin categoría'),
+                            )
+                            .name;
+
+                        return ListTile(
+                          leading:
+                              const Icon(Icons.circle, size: 10),
+                          title: Text(ing.name),
+                          subtitle: Text("${ing.quantity} - $catName"),
+                        );
+                      },
+                    ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // ================= BOTÓN EDITAR =================
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EditRecipePage(recipe: recipe),
+                    ),
+                  );
+                },
+                child: const Text("EDITAR"),
+              ),
+            ),
           ],
         ),
       ),

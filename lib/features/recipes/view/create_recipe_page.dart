@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../model/ingredient_model.dart';
+import '../../categories/model/category_model.dart';
 import '../viewmodel/recipe_viewmodel.dart';
 
 class CreateRecipePage extends StatefulWidget {
@@ -17,104 +18,58 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
 
   final nameCtrl = TextEditingController();
   final stepsCtrl = TextEditingController();
-
   final ingCtrl = TextEditingController();
   final qtyCtrl = TextEditingController();
-  final catCtrl = TextEditingController();
 
+  String? selectedCategoryId;
   Uint8List? photo;
   List<IngredientModel> ingredients = [];
 
-  // ============================
-  // AGREGAR INGREDIENTE CON VALIDACIÓN
-  // ============================
- void addIngredient() {
-  final name = ingCtrl.text.trim();
-  final qty = qtyCtrl.text.trim();
-  final category = catCtrl.text.trim();
-
-  if (name.isEmpty || qty.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Nombre y cantidad del ingrediente son obligatorios"),
-        backgroundColor: Colors.orange,
-      ),
-    );
-    return;
+  @override
+  void initState() {
+    super.initState();
+    Provider.of<RecipeViewModel>(context, listen: false).loadCategories();
   }
 
-  // ✅ Evitar duplicados
-  final exists = ingredients.any(
-    (e) => e.name.toLowerCase() == name.toLowerCase(),
-  );
+  void addIngredient() {
+    final name = ingCtrl.text.trim();
+    final qty = qtyCtrl.text.trim();
 
-  if (exists) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Este ingrediente ya fue agregado"),
-        backgroundColor: Colors.red,
+    if (name.isEmpty || qty.isEmpty || selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Completa ingrediente, cantidad y categoría")),
+      );
+      return;
+    }
+
+    final validFormat = RegExp(r'^\d+(\s?[a-zA-Z]+)?$');
+    if (!validFormat.hasMatch(qty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cantidad inválida")),
+      );
+      return;
+    }
+
+    ingredients.add(
+      IngredientModel(
+        name: name,
+        quantity: qty,
+        categoryId: selectedCategoryId!,
       ),
     );
-    return;
+
+    ingCtrl.clear();
+    qtyCtrl.clear();
+    selectedCategoryId = null;
+    setState(() {});
   }
 
-  // ✅ Validar que la cantidad no sea exagerada (si es solo número)
-    // ✅ VALIDAR FORMATO: número obligatorio al inicio
-  final validFormat = RegExp(r'^\d+(\s?[a-zA-Z]+)?$');
-
-  if (!validFormat.hasMatch(qty)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("La cantidad debe empezar con un número (ej: 2, 500g, 1 taza)"),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
-
-  // ✅ Validar que el valor numérico no sea exagerado
-  final numberPart = int.parse(
-    RegExp(r'^\d+').firstMatch(qty)!.group(0)!,
-  );
-
-  if (numberPart > 10000) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("La cantidad es demasiado grande"),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
-
-
-  ingredients.add(
-    IngredientModel(
-      name: name,
-      quantity: qty,
-      category: category,
-    ),
-  );
-
-  ingCtrl.clear();
-  qtyCtrl.clear();
-  catCtrl.clear();
-  setState(() {});
-}
-
-
-  // ============================
-  // GUARDAR RECETA CON VALIDACIÓN
-  // ============================
   Future<void> saveRecipe(RecipeViewModel vm) async {
     if (!_formKey.currentState!.validate()) return;
 
     if (ingredients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Debes agregar al menos un ingrediente"),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text("Agrega al menos un ingrediente")),
       );
       return;
     }
@@ -127,7 +82,6 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
     );
 
     if (!context.mounted) return;
-
     Navigator.pop(context);
   }
 
@@ -143,69 +97,49 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
           key: _formKey,
           child: Column(
             children: [
-              // ================= NOMBRE =================
               TextFormField(
                 controller: nameCtrl,
                 decoration: const InputDecoration(labelText: "Nombre"),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return "El nombre es obligatorio";
-                  }
-                  if (value.trim().length < 3) {
-                    return "Mínimo 3 caracteres";
-                  }
-                  if (value.trim().length > 30) {
-                    return "Máximo 30 caracteres";
-                  }
-                  return null;
-                },
+                validator: (v) => v == null || v.isEmpty ? "Obligatorio" : null,
               ),
 
-              // ================= PREPARACIÓN =================
               TextFormField(
                 controller: stepsCtrl,
                 decoration: const InputDecoration(labelText: "Preparación"),
                 maxLines: 4,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return "La preparación es obligatoria";
-                  }
-                  if (value.trim().length < 10) {
-                    return "Debe tener mínimo 10 caracteres";
-                  }
-                  return null;
-                },
+                validator: (v) =>
+                    v == null || v.length < 10 ? "Mínimo 10 caracteres" : null,
               ),
 
               const Divider(),
 
-              // ================= INGREDIENTES =================
               TextField(
                 controller: ingCtrl,
-                decoration:
-                    const InputDecoration(labelText: "Ingrediente"),
+                decoration: const InputDecoration(labelText: "Ingrediente"),
               ),
+
               TextField(
                 controller: qtyCtrl,
                 decoration: const InputDecoration(labelText: "Cantidad"),
-                keyboardType: TextInputType.text,
                 inputFormatters: [
-                  // ✅ SOLO permite empezar con números
                   FilteringTextInputFormatter.allow(
                     RegExp(r'^[0-9]+[a-zA-Z\s]*$'),
                   ),
-                  LengthLimitingTextInputFormatter(10),
                 ],
               ),
 
-
-              TextField(
-                controller: catCtrl,
+              DropdownButtonFormField<String>(
+                value: selectedCategoryId,
                 decoration: const InputDecoration(labelText: "Categoría"),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-                  LengthLimitingTextInputFormatter(20), // máx 20 letras
-                ],
+                items: vm.categories.map((CategoryModel cat) {
+                  return DropdownMenuItem(
+                    value: cat.id,
+                    child: Text(cat.name),
+                  );
+                }).toList(),
+                onChanged: (value) => setState(() {
+                  selectedCategoryId = value;
+                }),
               ),
 
               ElevatedButton(
@@ -218,24 +152,18 @@ class _CreateRecipePageState extends State<CreateRecipePage> {
                   itemCount: ingredients.length,
                   itemBuilder: (_, i) {
                     final e = ingredients[i];
+                    final catName = vm.categories
+                        .firstWhere((c) => c.id == e.categoryId)
+                        .name;
+
                     return ListTile(
                       title: Text(e.name),
-                      subtitle:
-                          Text("${e.quantity} - ${e.category}"),
-                      trailing: IconButton(
-                        icon:
-                            const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          ingredients.removeAt(i);
-                          setState(() {});
-                        },
-                      ),
+                      subtitle: Text("${e.quantity} - $catName"),
                     );
                   },
                 ),
               ),
 
-              // ================= GUARDAR =================
               ElevatedButton(
                 onPressed: () => saveRecipe(vm),
                 child: const Text("GUARDAR"),
