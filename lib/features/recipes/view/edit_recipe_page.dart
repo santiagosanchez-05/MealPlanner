@@ -228,7 +228,7 @@ class _EditRecipePageState extends State<EditRecipePage> {
 
               // ================= CATEGORÍA =================
               DropdownButtonFormField<String>(
-              value: selectedCategoryId,
+              initialValue: selectedCategoryId,
               decoration: const InputDecoration(labelText: "Categoría"),
               items: vm.categories.map((CategoryModel cat) {
                 return DropdownMenuItem(

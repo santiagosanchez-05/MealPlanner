@@ -46,16 +46,6 @@ class _PlannerPageState extends State<PlannerPage> {
             onSelected: (value) => _handleMenuAction(value),
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'duplicate',
-                child: Row(
-                  children: [
-                    Icon(Icons.content_copy),
-                    SizedBox(width: 8),
-                    Text('Duplicar plan'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
                 value: 'clear',
                 child: Row(
                   children: [
@@ -128,13 +118,13 @@ class _PlannerPageState extends State<PlannerPage> {
             );
           }
 
-          // Plan loaded
+          // Plan loaded - Vista tipo calendario
           return Column(
             children: [
               // Week navigation header
               Container(
                 padding: const EdgeInsets.all(16),
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -147,8 +137,12 @@ class _PlannerPageState extends State<PlannerPage> {
                         children: [
                           Text(
                             plan.dateRangeFormatted,
-                            style: Theme.of(context).textTheme.titleLarge,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge!
+                                .copyWith(fontWeight: FontWeight.bold),
                           ),
+                          const SizedBox(height: 4),
                           Text(
                             viewModel.planStats,
                             style: Theme.of(context).textTheme.bodySmall,
@@ -164,13 +158,29 @@ class _PlannerPageState extends State<PlannerPage> {
                 ),
               ),
 
-              // Days list
+              // Header con días de la semana
+              Container(
+                height: 40,
+                color: Theme.of(context).primaryColor.withOpacity(0.05),
+                child: Row(
+                  children: _buildWeekDayHeaders(),
+                ),
+              ),
+
+              // Grid del calendario semanal
               Expanded(
-                child: ListView.builder(
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(8),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 0.8,
+                  ),
                   itemCount: plan.days.length,
                   itemBuilder: (context, index) {
                     final day = plan.days[index];
-                    return _DayCard(day: day);
+                    return _DayCell(day: day);
                   },
                 ),
               ),
@@ -181,13 +191,38 @@ class _PlannerPageState extends State<PlannerPage> {
     );
   }
 
+  List<Widget> _buildWeekDayHeaders() {
+    const weekDays = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    const weekDayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+    return List.generate(7, (index) {
+      return Expanded(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              weekDays[index],
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              weekDayNames[index],
+              style: const TextStyle(
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   void _handleMenuAction(String action) {
     final viewModel = context.read<PlannerViewModel>();
 
     switch (action) {
-      case 'duplicate':
-        _showDuplicateDialog(viewModel);
-        break;
       case 'clear':
         _showClearDialog(viewModel);
         break;
@@ -199,7 +234,7 @@ class _PlannerPageState extends State<PlannerPage> {
 
   Future<void> _savePlan(BuildContext context) async {
     final viewModel = context.read<PlannerViewModel>();
-    
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -236,24 +271,6 @@ class _PlannerPageState extends State<PlannerPage> {
         );
       }
     }
-  }
-
-  void _showDuplicateDialog(PlannerViewModel viewModel) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Duplicar plan'),
-        content: const Text(
-          'Esta funcionalidad permitirá duplicar el plan actual a otra semana.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showClearDialog(PlannerViewModel viewModel) {
@@ -330,109 +347,420 @@ class _PlannerPageState extends State<PlannerPage> {
   }
 }
 
-/// Widget para mostrar un día con sus comidas
-class _DayCard extends StatelessWidget {
+/// Celda individual para cada día del calendario
+class _DayCell extends StatelessWidget {
   final DayPlan day;
 
-  const _DayCard({required this.day});
+  const _DayCell({required this.day});
 
   @override
   Widget build(BuildContext context) {
     final isToday = _isToday(day.date);
+    final theme = Theme.of(context);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: isToday
-          ? Theme.of(context).primaryColor.withValues(alpha: 0.05)
-          : null,
-      child: ExpansionTile(
-        leading: CircleAvatar(
-          backgroundColor: isToday
-              ? Theme.of(context).primaryColor
-              : Colors.grey,
-          child: Text(
-            day.date.day.toString(),
-            style: TextStyle(
-              color: isToday ? Colors.white : Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+    return GestureDetector(
+      onTap: () {
+        _showDayDetails(context, day);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isToday
+              ? theme.colorScheme.primary.withOpacity(0.1)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isToday
+                ? theme.colorScheme.primary
+                : Colors.grey.shade300,
+            width: isToday ? 2 : 1,
           ),
-        ),
-        title: Row(
-          children: [
-            Text(
-              day.dayName,
-              style: TextStyle(
-                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
-            if (isToday)
-              Container(
-                margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.circular(4),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Encabezado con número del día
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: isToday
+                    ? theme.colorScheme.primary
+                    : Colors.grey.shade100,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
                 ),
-                child: const Text(
-                  'HOY',
+              ),
+              child: Center(
+                child: Text(
+                  '${day.date.day}',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    color: isToday ? Colors.white : Colors.black,
                   ),
                 ),
               ),
+            ),
+
+            // Indicador "Hoy"
+            if (isToday)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'HOY',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+
+            // Comidas del día
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: day.meals.length,
+                  itemBuilder: (context, index) {
+                    final meal = day.meals[index];
+                    return _MealIndicator(meal: meal);
+                  },
+                ),
+              ),
+            ),
+
+            // Contador de comidas
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${day.assignedMealsCount}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Text(
+                    '/',
+                    style: TextStyle(fontSize: 10),
+                  ),
+                  Text(
+                    '${MealType.values.length}',
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
-        subtitle: Text(
-          '${day.assignedMealsCount} de ${MealType.values.length} comidas planificadas',
-        ),
-        children: day.meals.map((meal) => _MealTile(meal: meal)).toList(),
       ),
     );
   }
 
   bool _isToday(DateTime date) {
-    final today = DateTime.now();
-    return date.year == today.year &&
-        date.month == today.month &&
-        date.day == today.day;
+    final now = DateTime.now();
+    return now.year == date.year &&
+        now.month == date.month &&
+        now.day == date.day;
+  }
+
+  void _showDayDetails(BuildContext context, DayPlan day) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _DayDetailsSheet(day: day),
+    );
   }
 }
 
-/// Widget para mostrar una comida individual
-class _MealTile extends StatelessWidget {
+/// Indicador de comida dentro de la celda
+class _MealIndicator extends StatelessWidget {
   final MealPlan meal;
 
-  const _MealTile({required this.meal});
+  const _MealIndicator({required this.meal});
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(
-        _getMealIcon(meal.mealType),
-        color: meal.hasRecipe ? Theme.of(context).primaryColor : Colors.grey,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            _getMealIcon(meal.mealType),
+            size: 12,
+            color: meal.hasRecipe
+                ? Theme.of(context).primaryColor
+                : Colors.grey.shade400,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              meal.hasRecipe
+                  ? (meal.recipeName!.length > 8
+                      ? '${meal.recipeName!.substring(0, 8)}...'
+                      : meal.recipeName!)
+                  : '—',
+              style: TextStyle(
+                fontSize: 10,
+                color: meal.hasRecipe ? Colors.black : Colors.grey.shade500,
+                fontWeight:
+                    meal.hasRecipe ? FontWeight.w500 : FontWeight.normal,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
-      title: Text(meal.mealType.displayName),
-      subtitle: Text(
-        meal.hasRecipe
-            ? meal.recipeName ?? 'Receta sin nombre'
-            : 'Sin planificar',
-        style: TextStyle(
-          color: meal.hasRecipe ? null : Colors.grey,
-          fontStyle: meal.hasRecipe ? FontStyle.normal : FontStyle.italic,
+    );
+  }
+
+  IconData _getMealIcon(MealType type) {
+    switch (type) {
+      case MealType.breakfast:
+        return Icons.free_breakfast;
+      case MealType.lunch:
+        return Icons.lunch_dining;
+      case MealType.dinner:
+        return Icons.dinner_dining;
+    }
+  }
+}
+
+/// Sheet para mostrar detalles del día
+class _DayDetailsSheet extends StatefulWidget {
+  final DayPlan day;
+
+  const _DayDetailsSheet({required this.day});
+
+  @override
+  State<_DayDetailsSheet> createState() => __DayDetailsSheetState();
+}
+
+class __DayDetailsSheetState extends State<_DayDetailsSheet> {
+  late DayPlan _currentDay;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentDay = widget.day;
+  }
+
+  @override
+  void didUpdateWidget(_DayDetailsSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.day != oldWidget.day) {
+      setState(() {
+        _currentDay = widget.day;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isToday = _isToday(_currentDay.date);
+    final theme = Theme.of(context);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
         ),
       ),
-      trailing: meal.hasRecipe
-          ? IconButton(
-              icon: const Icon(Icons.close, color: Colors.red),
-              onPressed: () => _removeRecipe(context),
-            )
-          : IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () => _addRecipe(context),
+      child: Column(
+        children: [
+          // Header del sheet
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
             ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _currentDay.dayName,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        '${_currentDay.date.day} de ${_getMonthName(_currentDay.date.month)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isToday)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: const Text(
+                      'HOY',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Lista de comidas
+          Expanded(
+            child: Consumer<PlannerViewModel>(
+              builder: (context, viewModel, child) {
+                // Actualizar el día con la información más reciente
+                final updatedPlan = viewModel.currentWeekPlan;
+                if (updatedPlan != null) {
+                  final updatedDay = updatedPlan.days.firstWhere(
+                    (d) => d.date == _currentDay.date,
+                    orElse: () => _currentDay,
+                  );
+                  if (updatedDay != _currentDay) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      setState(() {
+                        _currentDay = updatedDay;
+                      });
+                    });
+                  }
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _currentDay.meals.length,
+                  itemBuilder: (context, index) {
+                    final meal = _currentDay.meals[index];
+                    return _MealDetailCard(meal: meal, day: _currentDay);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return now.year == date.year &&
+        now.month == date.month &&
+        now.day == date.day;
+  }
+
+  String _getMonthName(int month) {
+    final months = [
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre'
+    ];
+    return months[month - 1];
+  }
+}
+
+/// Tarjeta de detalle de comida en el sheet
+class _MealDetailCard extends StatelessWidget {
+  final MealPlan meal;
+  final DayPlan day;
+
+  const _MealDetailCard({required this.meal, required this.day});
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.read<PlannerViewModel>();
+    final recipeViewModel = context.read<RecipeViewModel>();
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Icon(
+          _getMealIcon(meal.mealType),
+          color: meal.hasRecipe
+              ? Theme.of(context).primaryColor
+              : Colors.grey.shade500,
+        ),
+        title: Text(meal.mealType.displayName),
+        subtitle: Text(
+          meal.hasRecipe ? meal.recipeName! : 'Sin receta asignada',
+          style: TextStyle(
+            color: meal.hasRecipe ? null : Colors.grey,
+            fontStyle: meal.hasRecipe ? FontStyle.normal : FontStyle.italic,
+          ),
+        ),
+        trailing: meal.hasRecipe
+            ? IconButton(
+                icon: const Icon(Icons.close, color: Colors.red),
+                onPressed: () => _removeRecipe(context, viewModel),
+              )
+            : IconButton(
+                icon: Icon(Icons.add,
+                    color: Theme.of(context).primaryColor),
+                onPressed: () => _addRecipe(context, viewModel, recipeViewModel),
+              ),
+      ),
     );
   }
 
@@ -447,20 +775,21 @@ class _MealTile extends StatelessWidget {
     }
   }
 
-  void _addRecipe(BuildContext context) async {
-    final recipeViewModel = context.read<RecipeViewModel>();
-    final plannerViewModel = context.read<PlannerViewModel>();
-
-    // Cargar recetas del usuario
+  Future<void> _addRecipe(
+    BuildContext context,
+    PlannerViewModel plannerViewModel,
+    RecipeViewModel recipeViewModel,
+  ) async {
     await recipeViewModel.loadRecipes();
 
     if (context.mounted) {
-      showDialog(
+      final selectedRecipe = await showDialog<Map<String, dynamic>?>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Seleccionar receta'),
           content: SizedBox(
             width: double.maxFinite,
+            height: 400,
             child: recipeViewModel.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : recipeViewModel.recipes.isEmpty
@@ -471,30 +800,19 @@ class _MealTile extends StatelessWidget {
                           final recipe = recipeViewModel.recipes[index];
                           return ListTile(
                             title: Text(recipe.name),
-                            onTap: () async {
-                              Navigator.pop(context);
-                              
-                              // Asignar receta a la comida
-                              if (meal.id != null) {
-                                final success =
-                                    await plannerViewModel.assignRecipeToMeal(
-                                  meal.id!,
-                                  recipe.id,
-                                  recipe.name,
-                                );
-
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        success
-                                            ? 'Receta asignada: ${recipe.name}'
-                                            : 'Error: ${plannerViewModel.errorMessage}',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
+                            subtitle: recipe.steps.isNotEmpty
+                                ? Text(
+                                    recipe.steps.length > 50
+                                        ? '${recipe.steps.substring(0, 50)}...'
+                                        : recipe.steps,
+                                    maxLines: 2,
+                                  )
+                                : null,
+                            onTap: () {
+                              Navigator.pop(context, {
+                                'id': recipe.id,
+                                'name': recipe.name,
+                              });
                             },
                           );
                         },
@@ -508,12 +826,34 @@ class _MealTile extends StatelessWidget {
           ],
         ),
       );
+
+      if (selectedRecipe != null && meal.id != null) {
+        final success = await plannerViewModel.assignRecipeToMeal(
+          meal.id!,
+          selectedRecipe['id'],
+          selectedRecipe['name'],
+        );
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                success
+                    ? 'Receta asignada: ${selectedRecipe['name']}'
+                    : 'Error: ${plannerViewModel.errorMessage}',
+              ),
+              backgroundColor: success ? Colors.green : Colors.red,
+            ),
+          );
+          
+          // Forzar rebuild del Consumer
+          plannerViewModel.notifyListeners();
+        }
+      }
     }
   }
 
-  void _removeRecipe(BuildContext context) async {
-    final viewModel = context.read<PlannerViewModel>();
-
+  Future<void> _removeRecipe(BuildContext context, PlannerViewModel viewModel) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -534,17 +874,21 @@ class _MealTile extends StatelessWidget {
       ),
     );
 
-    if (confirm == true && context.mounted) {
+    if (confirm == true) {
       final success = await viewModel.removeRecipeFromMeal(meal.id!);
-
+      
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               success ? 'Receta removida' : 'Error: ${viewModel.errorMessage}',
             ),
+            backgroundColor: success ? Colors.green : Colors.red,
           ),
         );
+        
+        // Forzar rebuild del Consumer
+        viewModel.notifyListeners();
       }
     }
   }
