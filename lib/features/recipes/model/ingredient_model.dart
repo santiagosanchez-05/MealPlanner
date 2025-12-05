@@ -15,4 +15,13 @@ class IngredientModel {
         'quantity': quantity,
         'category_id': categoryId,
       };
+
+  IngredientModel copy() {
+  return IngredientModel(
+    name: name,
+    quantity: quantity,
+    categoryId: categoryId,
+  );
+}
+
 }

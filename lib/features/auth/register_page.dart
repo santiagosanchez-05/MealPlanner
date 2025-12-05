@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // ✅ IMPORTANTE
 import '../../core/supabase_client.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -20,8 +21,19 @@ class _RegisterPageState extends State<RegisterPage> {
     final pass = passCtrl.text.trim();
     final confirm = passConfirmCtrl.text.trim();
 
+    // ✅ VALIDACIONES LOCALES
     if (email.isEmpty || pass.isEmpty || confirm.isEmpty) {
       showMessage("Complete todos los campos");
+      return;
+    }
+
+    if (!email.contains("@")) {
+      showMessage("Ingrese un correo válido");
+      return;
+    }
+
+    if (pass.length < 6) {
+      showMessage("La contraseña debe tener al menos 6 caracteres");
       return;
     }
 
@@ -33,19 +45,38 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => loading = true);
 
     try {
-      final res = await supabase.auth.signUp(
-  email: email,
-  password: pass,
-);
+      await supabase.auth.signUp(
+        email: email,
+        password: pass,
+      );
 
-showMessage("Cuenta creada. Revise su correo para confirmar.");
-Navigator.pop(context);
+      if (!mounted) return;
 
-    } catch (e) {
-      showMessage("Error: $e");
+      showMessage("Cuenta creada ✅. Revisa tu correo para confirmar.");
+      Navigator.pop(context);
+    } 
+    on AuthException catch (e) {
+      final msg = e.message.toLowerCase();
+
+      if (msg.contains("password")) {
+        showMessage("La contraseña es demasiado débil");
+      } 
+      else if (msg.contains("already") || msg.contains("registered")) {
+        showMessage("Este correo ya está registrado");
+      } 
+      else if (msg.contains("email")) {
+        showMessage("Correo inválido");
+      } 
+      else {
+        showMessage("Error al crear la cuenta. Intente nuevamente.");
+      }
+    } 
+    catch (_) {
+      showMessage("No se pudo conectar al servidor");
+    } 
+    finally {
+      if (mounted) setState(() => loading = false);
     }
-
-    setState(() => loading = false);
   }
 
   void showMessage(String msg) {

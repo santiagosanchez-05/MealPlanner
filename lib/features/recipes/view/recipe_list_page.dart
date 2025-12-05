@@ -59,10 +59,8 @@ class RecipeListPage extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => RecipeDetailPage(
               recipeId: recipe.id,
-              name: recipe.name,
-              steps: recipe.steps,
-              photo: recipe.photo,
             ),
+
           ),
         );
       },

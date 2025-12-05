@@ -30,27 +30,24 @@ class _EditRecipePageState extends State<EditRecipePage> {
   Uint8List? photo;
   List<IngredientModel> ingredients = [];
 
-  @override
-  void initState() {
-    super.initState();
+      @override
+    void initState() {
+      super.initState();
 
-    nameCtrl = TextEditingController(text: widget.recipe.name);
-    stepsCtrl = TextEditingController(text: widget.recipe.steps);
-    photo = widget.recipe.photo;
-    ingredients = List.from(widget.recipe.ingredients);
+      final vm = Provider.of<RecipeViewModel>(context, listen: false);
 
-    // Debug: verificar ingredientes cargados
-    print('📝 Ingredientes cargados: ${ingredients.length}');
-    for (var ing in ingredients) {
-      print('  - ${ing.name}: ${ing.quantity} (categoryId: ${ing.categoryId})');
+      nameCtrl = TextEditingController(text: widget.recipe.name);
+      stepsCtrl = TextEditingController(text: widget.recipe.steps);
+      photo = widget.recipe.photo;
+
+      // ✅ AQUÍ ESTÁ LA CLAVE: clonar desde el VM
+      ingredients = vm.ingredients.map((e) => e.copy()).toList();
+
+      vm.loadCategories().then((_) {
+        if (mounted) setState(() {});
+      });
     }
 
-    final vm = Provider.of<RecipeViewModel>(context, listen: false);
-    vm.loadCategories().then((_) {
-      // Forzar actualización después de cargar categorías
-      if (mounted) setState(() {});
-    });
-  }
 
   // ============================
   // AGREGAR INGREDIENTE
@@ -157,7 +154,8 @@ class _EditRecipePageState extends State<EditRecipePage> {
 
       if (!context.mounted) return;
 
-      Navigator.pop(context); // ✅ SOLO SE EJECUTA SI TODO SALE BIEN
+      Navigator.pop(context, true); // devuelve "true" si se actualizó
+// ✅ SOLO SE EJECUTA SI TODO SALE BIEN
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

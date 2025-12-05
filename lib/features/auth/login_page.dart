@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/supabase_client.dart';
 import 'register_page.dart';
 import '../dashboard/dashboard_page.dart';
@@ -42,21 +43,35 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (_) => const DashboardPage()),
       );
     } else {
-      // ❌ CREDENCIALES INCORRECTAS
       showMessage("Correo o contraseña incorrectos");
     }
-  } catch (e) {
-    if (e.toString().contains("Email not confirmed")) {
+  }
+  on AuthException catch (e) {
+    // ✅ ERRORES CONTROLADOS DE SUPABASE
+    if (e.message.contains("Invalid login credentials")) {
+      showMessage("Correo o contraseña incorrectos");
+    } 
+    else if (e.message.toLowerCase().contains("email not confirmed")) {
       showMessage("Debes confirmar tu correo. Revisa tu bandeja.");
-    } else {
-      showMessage("Error: $e");
     }
-  } finally {
+    else if (e.message.toLowerCase().contains("too many")) {
+      showMessage("Demasiados intentos. Intenta más tarde.");
+    }
+    else {
+      showMessage("Error de autenticación. Verifique sus datos.");
+    }
+  } 
+  catch (_) {
+    // ✅ ERROR GENERAL (INTERNET, SERVIDOR, ETC)
+    showMessage("No se pudo conectar al servidor. Verifique su conexión.");
+  } 
+  finally {
     if (mounted) {
       setState(() => loading = false);
     }
   }
 }
+
 
 
   void showMessage(String msg) {

@@ -6,54 +6,50 @@ import 'edit_recipe_page.dart';
 import '../model/recipe_model.dart';
 import '../../categories/model/category_model.dart';
 
-class RecipeDetailPage extends StatelessWidget {
+class RecipeDetailPage extends StatefulWidget {
   final String recipeId;
-  final String name;
-  final String steps;
-  final Uint8List? photo;
 
   const RecipeDetailPage({
     super.key,
     required this.recipeId,
-    required this.name,
-    required this.steps,
-    this.photo,
   });
+
+  @override
+  State<RecipeDetailPage> createState() => _RecipeDetailPageState();
+}
+
+class _RecipeDetailPageState extends State<RecipeDetailPage> {
+  @override
+  void initState() {
+    super.initState();
+    final vm = Provider.of<RecipeViewModel>(context, listen: false);
+
+    // ✅ SIEMPRE cargar ingredientes al entrar
+    vm.loadIngredients(widget.recipeId);
+  }
 
   @override
   Widget build(BuildContext context) {
     final vm = Provider.of<RecipeViewModel>(context);
 
-    // Debug: verificar ingredientes del ViewModel
-    print('🔍 RecipeDetailPage - Ingredientes en VM: ${vm.ingredients.length}');
-
-    // ✅ Crear objeto completo para enviar al Edit
-    final recipe = RecipeModel(
-      id: recipeId,
-      name: name,
-      steps: steps,
-      photo: photo,
-      ingredients: vm.ingredients,
-    );
-
-    print(
-      '📦 RecipeModel creado con ${recipe.ingredients.length} ingredientes',
-    );
+    // ✅ SIEMPRE obtener la receta DESDE el ViewModel
+    final recipe =
+        vm.recipes.firstWhere((r) => r.id == widget.recipeId);
 
     return Scaffold(
-      appBar: AppBar(title: Text(name)),
+      appBar: AppBar(title: Text(recipe.name)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ================= FOTO =================
-            if (photo != null)
+            if (recipe.photo != null)
               Center(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.memory(
-                    photo!,
+                    recipe.photo!,
                     width: double.infinity,
                     height: 200,
                     fit: BoxFit.cover,
@@ -69,7 +65,7 @@ class RecipeDetailPage extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(steps),
+            Text(recipe.steps), // ✅ AHORA SÍ SE ACTUALIZA
 
             const SizedBox(height: 20),
 
@@ -81,14 +77,8 @@ class RecipeDetailPage extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // Lista de ingredientes (sin Expanded)
             vm.ingredients.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text("No hay ingredientes"),
-                    ),
-                  )
+                ? const Center(child: Text("No hay ingredientes"))
                 : ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -96,7 +86,6 @@ class RecipeDetailPage extends StatelessWidget {
                     itemBuilder: (_, i) {
                       final ing = vm.ingredients[i];
 
-                      // ✅ Buscar nombre de la categoría por ID
                       final catName = vm.categories
                           .firstWhere(
                             (c) => c.id == ing.categoryId,
@@ -106,27 +95,34 @@ class RecipeDetailPage extends StatelessWidget {
                           .name;
 
                       return ListTile(
-                        leading: const Icon(Icons.circle, size: 10),
                         title: Text(ing.name),
-                        subtitle: Text("${ing.quantity} - $catName"),
+                        subtitle:
+                            Text("${ing.quantity} - $catName"),
                       );
                     },
                   ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
-            // ================= BOTÓN EDITAR =================
+            // ================= EDITAR =================
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EditRecipePage(recipe: recipe),
-                    ),
-                  );
-                },
+                onPressed: () async {
+                final updated = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditRecipePage(recipe: recipe),
+                  ),
+                );
+
+                if (updated == true) {
+                  await vm.loadRecipes();                    // refresca nombre + pasos
+                  await vm.loadIngredients(widget.recipeId); // refresca ingredientes
+                  if (mounted) setState(() {});              // 🔥 fuerza UI en caliente
+                }
+              },
+
                 child: const Text("EDITAR"),
               ),
             ),
@@ -136,3 +132,4 @@ class RecipeDetailPage extends StatelessWidget {
     );
   }
 }
+
