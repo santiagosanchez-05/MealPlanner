@@ -24,6 +24,9 @@ class RecipeDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = Provider.of<RecipeViewModel>(context);
 
+    // Debug: verificar ingredientes del ViewModel
+    print('🔍 RecipeDetailPage - Ingredientes en VM: ${vm.ingredients.length}');
+
     // ✅ Crear objeto completo para enviar al Edit
     final recipe = RecipeModel(
       id: recipeId,
@@ -33,9 +36,13 @@ class RecipeDetailPage extends StatelessWidget {
       ingredients: vm.ingredients,
     );
 
+    print(
+      '📦 RecipeModel creado con ${recipe.ingredients.length} ingredientes',
+    );
+
     return Scaffold(
       appBar: AppBar(title: Text(name)),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,10 +50,14 @@ class RecipeDetailPage extends StatelessWidget {
             // ================= FOTO =================
             if (photo != null)
               Center(
-                child: Image.memory(
-                  photo!,
-                  height: 200,
-                  fit: BoxFit.cover,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.memory(
+                    photo!,
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
 
@@ -70,32 +81,37 @@ class RecipeDetailPage extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            Expanded(
-              child: vm.ingredients.isEmpty
-                  ? const Center(child: Text("No hay ingredientes"))
-                  : ListView.builder(
-                      itemCount: vm.ingredients.length,
-                      itemBuilder: (_, i) {
-                        final ing = vm.ingredients[i];
-
-                        // ✅ Buscar nombre de la categoría por ID
-                        final catName = vm.categories
-                            .firstWhere(
-                              (c) => c.id == ing.categoryId,
-                              orElse: () =>
-                                  CategoryModel(id: '', name: 'Sin categoría'),
-                            )
-                            .name;
-
-                        return ListTile(
-                          leading:
-                              const Icon(Icons.circle, size: 10),
-                          title: Text(ing.name),
-                          subtitle: Text("${ing.quantity} - $catName"),
-                        );
-                      },
+            // Lista de ingredientes (sin Expanded)
+            vm.ingredients.isEmpty
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text("No hay ingredientes"),
                     ),
-            ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: vm.ingredients.length,
+                    itemBuilder: (_, i) {
+                      final ing = vm.ingredients[i];
+
+                      // ✅ Buscar nombre de la categoría por ID
+                      final catName = vm.categories
+                          .firstWhere(
+                            (c) => c.id == ing.categoryId,
+                            orElse: () =>
+                                CategoryModel(id: '', name: 'Sin categoría'),
+                          )
+                          .name;
+
+                      return ListTile(
+                        leading: const Icon(Icons.circle, size: 10),
+                        title: Text(ing.name),
+                        subtitle: Text("${ing.quantity} - $catName"),
+                      );
+                    },
+                  ),
 
             const SizedBox(height: 10),
 

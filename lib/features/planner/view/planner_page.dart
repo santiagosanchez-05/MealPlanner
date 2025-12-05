@@ -125,34 +125,18 @@ class _PlannerPageState extends State<PlannerPage> {
               Container(
                 padding: const EdgeInsets.all(16),
                 color: Theme.of(context).primaryColor.withOpacity(0.1),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed: () => viewModel.previousWeek(),
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Text(
-                            plan.dateRangeFormatted,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge!
-                                .copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            viewModel.planStats,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
+                    Text(
+                      plan.dateRangeFormatted,
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed: () => viewModel.nextWeek(),
+                    const SizedBox(height: 4),
+                    Text(
+                      viewModel.planStats,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
@@ -162,9 +146,7 @@ class _PlannerPageState extends State<PlannerPage> {
               Container(
                 height: 40,
                 color: Theme.of(context).primaryColor.withOpacity(0.05),
-                child: Row(
-                  children: _buildWeekDayHeaders(),
-                ),
+                child: Row(children: _buildWeekDayHeaders()),
               ),
 
               // Grid del calendario semanal
@@ -202,17 +184,9 @@ class _PlannerPageState extends State<PlannerPage> {
           children: [
             Text(
               weekDays[index],
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            Text(
-              weekDayNames[index],
-              style: const TextStyle(
-                fontSize: 10,
-              ),
-            ),
+            Text(weekDayNames[index], style: const TextStyle(fontSize: 10)),
           ],
         ),
       );
@@ -369,9 +343,7 @@ class _DayCell extends StatelessWidget {
               : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isToday
-                ? theme.colorScheme.primary
-                : Colors.grey.shade300,
+            color: isToday ? theme.colorScheme.primary : Colors.grey.shade300,
             width: isToday ? 2 : 1,
           ),
           boxShadow: [
@@ -463,10 +435,7 @@ class _DayCell extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Text(
-                    '/',
-                    style: TextStyle(fontSize: 10),
-                  ),
+                  const Text('/', style: TextStyle(fontSize: 10)),
                   Text(
                     '${MealType.values.length}',
                     style: const TextStyle(fontSize: 10),
@@ -521,14 +490,15 @@ class _MealIndicator extends StatelessWidget {
             child: Text(
               meal.hasRecipe
                   ? (meal.recipeName!.length > 8
-                      ? '${meal.recipeName!.substring(0, 8)}...'
-                      : meal.recipeName!)
+                        ? '${meal.recipeName!.substring(0, 8)}...'
+                        : meal.recipeName!)
                   : '—',
               style: TextStyle(
                 fontSize: 10,
                 color: meal.hasRecipe ? Colors.black : Colors.grey.shade500,
-                fontWeight:
-                    meal.hasRecipe ? FontWeight.w500 : FontWeight.normal,
+                fontWeight: meal.hasRecipe
+                    ? FontWeight.w500
+                    : FontWeight.normal,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -636,8 +606,10 @@ class __DayDetailsSheetState extends State<_DayDetailsSheet> {
                 ),
                 if (isToday)
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(15),
@@ -711,7 +683,7 @@ class __DayDetailsSheetState extends State<_DayDetailsSheet> {
       'Septiembre',
       'Octubre',
       'Noviembre',
-      'Diciembre'
+      'Diciembre',
     ];
     return months[month - 1];
   }
@@ -732,9 +704,7 @@ class _MealDetailCard extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: Icon(
           _getMealIcon(meal.mealType),
@@ -756,9 +726,9 @@ class _MealDetailCard extends StatelessWidget {
                 onPressed: () => _removeRecipe(context, viewModel),
               )
             : IconButton(
-                icon: Icon(Icons.add,
-                    color: Theme.of(context).primaryColor),
-                onPressed: () => _addRecipe(context, viewModel, recipeViewModel),
+                icon: Icon(Icons.add, color: Theme.of(context).primaryColor),
+                onPressed: () =>
+                    _addRecipe(context, viewModel, recipeViewModel),
               ),
       ),
     );
@@ -793,30 +763,30 @@ class _MealDetailCard extends StatelessWidget {
             child: recipeViewModel.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : recipeViewModel.recipes.isEmpty
-                    ? const Center(child: Text('No hay recetas disponibles'))
-                    : ListView.builder(
-                        itemCount: recipeViewModel.recipes.length,
-                        itemBuilder: (context, index) {
-                          final recipe = recipeViewModel.recipes[index];
-                          return ListTile(
-                            title: Text(recipe.name),
-                            subtitle: recipe.steps.isNotEmpty
-                                ? Text(
-                                    recipe.steps.length > 50
-                                        ? '${recipe.steps.substring(0, 50)}...'
-                                        : recipe.steps,
-                                    maxLines: 2,
-                                  )
-                                : null,
-                            onTap: () {
-                              Navigator.pop(context, {
-                                'id': recipe.id,
-                                'name': recipe.name,
-                              });
-                            },
-                          );
+                ? const Center(child: Text('No hay recetas disponibles'))
+                : ListView.builder(
+                    itemCount: recipeViewModel.recipes.length,
+                    itemBuilder: (context, index) {
+                      final recipe = recipeViewModel.recipes[index];
+                      return ListTile(
+                        title: Text(recipe.name),
+                        subtitle: recipe.steps.isNotEmpty
+                            ? Text(
+                                recipe.steps.length > 50
+                                    ? '${recipe.steps.substring(0, 50)}...'
+                                    : recipe.steps,
+                                maxLines: 2,
+                              )
+                            : null,
+                        onTap: () {
+                          Navigator.pop(context, {
+                            'id': recipe.id,
+                            'name': recipe.name,
+                          });
                         },
-                      ),
+                      );
+                    },
+                  ),
           ),
           actions: [
             TextButton(
@@ -845,7 +815,7 @@ class _MealDetailCard extends StatelessWidget {
               backgroundColor: success ? Colors.green : Colors.red,
             ),
           );
-          
+
           // Forzar rebuild del Consumer
           plannerViewModel.notifyListeners();
         }
@@ -853,7 +823,10 @@ class _MealDetailCard extends StatelessWidget {
     }
   }
 
-  Future<void> _removeRecipe(BuildContext context, PlannerViewModel viewModel) async {
+  Future<void> _removeRecipe(
+    BuildContext context,
+    PlannerViewModel viewModel,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -876,7 +849,7 @@ class _MealDetailCard extends StatelessWidget {
 
     if (confirm == true) {
       final success = await viewModel.removeRecipeFromMeal(meal.id!);
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -886,7 +859,7 @@ class _MealDetailCard extends StatelessWidget {
             backgroundColor: success ? Colors.green : Colors.red,
           ),
         );
-        
+
         // Forzar rebuild del Consumer
         viewModel.notifyListeners();
       }

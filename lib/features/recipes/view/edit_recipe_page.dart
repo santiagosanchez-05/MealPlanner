@@ -39,8 +39,17 @@ class _EditRecipePageState extends State<EditRecipePage> {
     photo = widget.recipe.photo;
     ingredients = List.from(widget.recipe.ingredients);
 
+    // Debug: verificar ingredientes cargados
+    print('📝 Ingredientes cargados: ${ingredients.length}');
+    for (var ing in ingredients) {
+      print('  - ${ing.name}: ${ing.quantity} (categoryId: ${ing.categoryId})');
+    }
+
     final vm = Provider.of<RecipeViewModel>(context, listen: false);
-    vm.loadCategories(); // ✅ cargar categorías
+    vm.loadCategories().then((_) {
+      // Forzar actualización después de cargar categorías
+      if (mounted) setState(() {});
+    });
   }
 
   // ============================
@@ -81,16 +90,16 @@ class _EditRecipePageState extends State<EditRecipePage> {
     if (!validFormat.hasMatch(qty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content:
-              Text("La cantidad debe iniciar con un número (ej: 2, 500g, 1 taza)"),
+          content: Text(
+            "La cantidad debe iniciar con un número (ej: 2, 500g, 1 taza)",
+          ),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    final numberPart =
-        int.parse(RegExp(r'^\d+').firstMatch(qty)!.group(0)!);
+    final numberPart = int.parse(RegExp(r'^\d+').firstMatch(qty)!.group(0)!);
 
     if (numberPart > 10000) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -125,40 +134,39 @@ class _EditRecipePageState extends State<EditRecipePage> {
   // GUARDAR CAMBIOS
   // ============================
   Future<void> saveChanges(RecipeViewModel vm) async {
-  if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  if (ingredients.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Debes agregar al menos un ingrediente"),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
+    if (ingredients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Debes agregar al menos un ingrediente"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await vm.updateRecipe(
+        widget.recipe.id,
+        nameCtrl.text.trim(),
+        stepsCtrl.text.trim(),
+        photo,
+        ingredients,
+      );
+
+      if (!context.mounted) return;
+
+      Navigator.pop(context); // ✅ SOLO SE EJECUTA SI TODO SALE BIEN
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error al actualizar receta: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
-
-  try {
-    await vm.updateRecipe(
-      widget.recipe.id,
-      nameCtrl.text.trim(),
-      stepsCtrl.text.trim(),
-      photo,
-      ingredients,
-    );
-
-    if (!context.mounted) return;
-
-    Navigator.pop(context); // ✅ SOLO SE EJECUTA SI TODO SALE BIEN
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Error al actualizar receta: $e"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -228,21 +236,17 @@ class _EditRecipePageState extends State<EditRecipePage> {
 
               // ================= CATEGORÍA =================
               DropdownButtonFormField<String>(
-              initialValue: selectedCategoryId,
-              decoration: const InputDecoration(labelText: "Categoría"),
-              items: vm.categories.map((CategoryModel cat) {
-                return DropdownMenuItem(
-                  value: cat.id,
-                  child: Text(cat.name),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedCategoryId = value;
-                });
-              },
-            ),
-
+                initialValue: selectedCategoryId,
+                decoration: const InputDecoration(labelText: "Categoría"),
+                items: vm.categories.map((CategoryModel cat) {
+                  return DropdownMenuItem(value: cat.id, child: Text(cat.name));
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedCategoryId = value;
+                  });
+                },
+              ),
 
               const SizedBox(height: 10),
 
@@ -253,25 +257,35 @@ class _EditRecipePageState extends State<EditRecipePage> {
 
               // ================= LISTA =================
               Expanded(
-                child: ListView.builder(
-                  itemCount: ingredients.length,
-                  itemBuilder: (_, i) {
-                    final e = ingredients[i];
-                    final catName = vm.categories
-                        .firstWhere((c) => c.id == e.categoryId)
-                        .name;
+                child: ingredients.isEmpty
+                    ? const Center(
+                        child: Text(
+                          "No hay ingredientes agregados",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: ingredients.length,
+                        itemBuilder: (_, i) {
+                          final e = ingredients[i];
 
-                    return ListTile(
-                      title: Text(e.name),
-                      subtitle: Text("${e.quantity} - $catName"),
-                      trailing: IconButton(
-                        icon:
-                            const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => removeIngredient(i),
+                          // Buscar categoría de forma segura
+                          final category = vm.categories.firstWhere(
+                            (c) => c.id == e.categoryId,
+                            orElse: () =>
+                                CategoryModel(id: '', name: 'Sin categoría'),
+                          );
+
+                          return ListTile(
+                            title: Text(e.name),
+                            subtitle: Text("${e.quantity} - ${category.name}"),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => removeIngredient(i),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
 
               // ================= GUARDAR CAMBIOS =================
