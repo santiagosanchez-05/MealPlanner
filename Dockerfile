@@ -1,3 +1,6 @@
+ARG CACHEBUST=1
+RUN echo $CACHEBUST
+
 FROM nginx:alpine
 
 # Limpia contenido por defecto de Nginx
