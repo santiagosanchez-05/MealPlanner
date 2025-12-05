@@ -22,11 +22,13 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   @override
   void initState() {
     super.initState();
-    final vm = Provider.of<RecipeViewModel>(context, listen: false);
 
-    // ✅ SIEMPRE cargar ingredientes al entrar
-    vm.loadIngredients(widget.recipeId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final vm = Provider.of<RecipeViewModel>(context, listen: false);
+      await vm.loadIngredients(widget.recipeId); // ✅ AHORA SÍ SE ESPERA
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -77,30 +79,32 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
 
             const SizedBox(height: 10),
 
-            vm.ingredients.isEmpty
-                ? const Center(child: Text("No hay ingredientes"))
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: vm.ingredients.length,
-                    itemBuilder: (_, i) {
-                      final ing = vm.ingredients[i];
+            vm.ingredientsLoading
+              ? const Center(child: CircularProgressIndicator())
+              : vm.ingredients.isEmpty
+                  ? const Center(child: Text("No hay ingredientes"))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: vm.ingredients.length,
+                      itemBuilder: (_, i) {
+                        final ing = vm.ingredients[i];
 
-                      final catName = vm.categories
-                          .firstWhere(
-                            (c) => c.id == ing.categoryId,
-                            orElse: () =>
-                                CategoryModel(id: '', name: 'Sin categoría'),
-                          )
-                          .name;
+                        final catName = vm.categories
+                            .firstWhere(
+                              (c) => c.id == ing.categoryId,
+                              orElse: () =>
+                                  CategoryModel(id: '', name: 'Sin categoría'),
+                            )
+                            .name;
 
-                      return ListTile(
-                        title: Text(ing.name),
-                        subtitle:
-                            Text("${ing.quantity} - $catName"),
-                      );
-                    },
-                  ),
+                        return ListTile(
+                          title: Text(ing.name),
+                          subtitle: Text("${ing.quantity} - $catName"),
+                        );
+                      },
+                    ),
+
 
             const SizedBox(height: 20),
 

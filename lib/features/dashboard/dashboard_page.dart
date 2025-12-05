@@ -120,16 +120,7 @@ class DashboardPage extends StatelessWidget {
                     );
                   },
                 ),
-                _buildCard(
-                  icon: Icons.category,
-                  title: "Categorías",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CategoryListPage()),
-                    );
-                  },
-                ),
+                
 
                 
               ],

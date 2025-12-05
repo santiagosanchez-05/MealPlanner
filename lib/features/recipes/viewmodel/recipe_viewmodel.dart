@@ -13,6 +13,8 @@ class RecipeViewModel extends ChangeNotifier {
   List<CategoryModel> categories = [];
 
   bool isLoading = false;
+  bool ingredientsLoading = false;
+
 
   // ==========================
   // CARGAR RECETAS
@@ -32,21 +34,23 @@ class RecipeViewModel extends ChangeNotifier {
   // CARGAR INGREDIENTES
   // ==========================
   Future<void> loadIngredients(String recipeId) async {
-    ingredients.clear();
-    notifyListeners();
+  ingredientsLoading = true;
+  notifyListeners();
 
-    final data = await _service.getIngredients(recipeId);
+  final data = await _service.getIngredients(recipeId);
 
-    ingredients = data.map<IngredientModel>((e) {
-      return IngredientModel(
-        name: e['name'],
-        quantity: e['quantity'],
-        categoryId: e['category_id'],
-      );
-    }).toList();
+  ingredients = data.map<IngredientModel>((e) {
+    return IngredientModel(
+      name: e['name'],
+      quantity: e['quantity'],
+      categoryId: e['category_id'],
+    );
+  }).toList();
 
-    notifyListeners();
-  }
+  ingredientsLoading = false;
+  notifyListeners();
+}
+
 
   // ==========================
   // CARGAR CATEGORÍAS
