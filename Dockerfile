@@ -1,7 +1,8 @@
-ARG CACHEBUST=1
-RUN echo $CACHEBUST
-
 FROM nginx:alpine
+
+# ✅ Forzar rebuild sin cache
+ARG CACHEBUST=1
+RUN echo "Rebuild: $CACHEBUST"
 
 # Limpia contenido por defecto de Nginx
 RUN rm -rf /usr/share/nginx/html/*
@@ -14,5 +15,3 @@ EXPOSE 80
 
 # Inicia Nginx
 CMD ["nginx", "-g", "daemon off;"]
-
-
